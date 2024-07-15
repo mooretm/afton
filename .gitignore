@@ -1,0 +1,15 @@
+__pycache__
+.pytest_cache/
+venv/
+stimuli/
+Data/
+output/
+build/
+dist/
+*.csv
+*.doc
+*.docx
+*.png
+*.jpg
+*.jpeg
+*.wav
