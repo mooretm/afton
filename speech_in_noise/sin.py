@@ -3,8 +3,9 @@
 This script relies on a single CSV file containing only 
 word and sentence score data for a given group (e.g., RIC, CIC). 
 
-Written by: Sarah Iverson, Travis M. Moore
-Last edited: July 15, 2024
+Written by: Travis M. Moore and Sarah Iverson
+
+Last edited: July 18, 2024
 """
 
 ###########
@@ -48,9 +49,15 @@ logger.addHandler(handler)
 # Functions #
 #############
 def browse_for_data():
-	""" Import CSV data using a tkinter filedialog for navigation. """
+	""" Import raw CSV data using a tkinter file browser for file selection.
+	
+	:return: A DataFrame of the raw CSV data (no organization or 
+		cleaning occurs here).
+	:rtype: pd.DataFrame
+	"""
 	# Set up GUI root to use filedialog
 	root = tk.Tk()
+	# Hide root window
 	root.withdraw()
 	# Get path to data
 	filename = filedialog.askopenfilename(
@@ -62,33 +69,53 @@ def browse_for_data():
 	return data
 
 def organize_data(data):
-	""" Return word and sentence data in separate dataframes. """
+	""" Create separate word and sentence DataFrames. 
+	
+	:param data: Raw SIN data from imported CSV.
+	:type data: pd.DataFrame
+	:return: Two DataFrames - 1 for words, 1 for sentences.
+	:rtype: pd.DataFrame
+	"""
 	# Get original column names
 	cols = data.columns
 	# Filter col names by words and sentences
 	word_col_names = [value for value in cols if 'Words' in value]
 	sentence_col_names = [value for value in cols if 'Sentences' in value]
-	# Select word and sentence data separately
+	# Create separate word and sentence DataFrames
 	word_data = data[word_col_names].copy()
 	sentence_data = data[sentence_col_names].copy()
 	# Reformat column names for plots
+	# Word column names
 	new_word_col_names = []
 	for col in word_col_names:
+		# Split by underscore and remove last value
 		temp = col.split('_')[:-1]
+		# Concatenate items separated by a space
 		temp = ' '.join(temp)
+		# Add reformatted column name to list
 		new_word_col_names.append(temp)
+	# Sentence column names
 	new_sentence_col_names = []
 	for col in sentence_col_names:
 		temp = col.split('_')[:-1]
 		temp = ' '.join(temp)
 		new_sentence_col_names.append(temp)
-	# Rename dataframe columns
+	# Rename DataFrame columns
 	word_data.columns = new_word_col_names
 	sentence_data.columns = new_sentence_col_names
 	return word_data, sentence_data
 
 def friedman_test(data, condition):
-	""" Conduct Friedman Test and log results to console. """
+	""" Conduct Friedman Test and log results to console.
+	
+	:param data: A DataFrame of imported and organized CSV SIN data.
+	:type data: pd.DataFrame
+	:param condition: The name of the condition to display in the results.
+	:type condition: str
+	:return: Prints test results to console.
+	:rtype: None
+	"""
+	# Pass DataFrame columns as lists (requires unpack operator: *)
 	statistic, pvalue = stats.friedmanchisquare(*data.values.tolist())
 	statistic = np.round(statistic, 3)
 	pvalue = np.round(pvalue, 3)
@@ -98,7 +125,15 @@ def friedman_test(data, condition):
 	logger.info("p-value: %s", np.round(pvalue, 3))
 
 def wilcoxon_test(data, condition):
-	""" Conduct Wilcoxon Test and log results to console. """
+	""" Conduct Wilcoxon Test and log results to console. 
+	
+	:param data: A DataFrame of imported and organized CSV SIN data.
+	:type data: pd.DataFrame
+	:param condition: The name of the condition to display in the results.
+	:type condition: str
+	:return: Prints test results to console.
+	:rtype: None
+	"""
 	for combo in itertools.combinations(data.columns, 2):
 		i = combo[0]
 		j = combo[1]
@@ -112,7 +147,26 @@ def wilcoxon_test(data, condition):
 		logger.info("p-value: %s", np.round(pvalue, 3))
 
 def make_plots(data, title=None, save_name=None, show=True, save=False):
-	""" Generic plot with save and show/hide functionality. """
+	""" Create box plots for SIN data. 
+	
+	Accepts custom plot title and saved PNG name. The 'save_name' 
+	
+	:param data: A DataFrame of fully organized word or sentence data.
+	:type data: pd.DataFrame
+	:param title: A title for the plot.
+	:type title: str
+	:param save_name: The name for the saved plot PNG file. 
+		Only required if 'save' is set to True.
+	:type save_name: str or None
+	:param show: Either True or False. Determines whether or not to display
+		the plots as they are created.
+	:type show: bool
+	:param save: Either True or False. Determines whether or not to save
+		the plots as they are created. 
+	:type save: bool
+	:return: Optionally saves plots as PNG files.
+	:rtype: None
+	"""
 	# Check for valid arguments
 	if not isinstance(data, pd.DataFrame):
 		logger.error("No data provided!")
@@ -125,10 +179,7 @@ def make_plots(data, title=None, save_name=None, show=True, save=False):
 			logger.error("You must provide a name for the saved plot!")
 			return
 	# Plot
-	sns.boxplot(
-		data=sentence_data, 
-		orient="v"
-	)
+	sns.boxplot(data=data, orient="v")
 	plt.ylim([0,100])
 	plt.title(title + f"\n(n={data.shape[0]})")
 	plt.ylabel("Percent Correct (%)")
@@ -153,7 +204,7 @@ if __name__ == '__main__':
 	# Get data from file browser
 	#data = browse_for_data()
 
-	# Get data from file path ('./' refers to the code's root folder)
+	# Get data from file path ('./' refers to the root folder)
 	data = pd.read_csv('./afton_sin_test_data.csv')
 
 	# Prepare word and sentence data
