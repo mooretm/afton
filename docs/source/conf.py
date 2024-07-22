@@ -6,27 +6,27 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../..'))
 
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'Afton Validation'
-copyright = '2024, Travis M. Moore, Sarah Iverson'
-author = 'Travis M. Moore, Sarah Iverson'
-release = '0.1.0'
+copyright = '2024, Travis M. Moore and Sarah Iverson'
+author = 'Travis M. Moore and Sarah Iverson'
+release = '1.0.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.viewcode'    
+    'sphinx.ext.viewcode'
 ]
 
 templates_path = ['_templates']
 exclude_patterns = []
 
-# Include the __init__ method's docstring in the class documentation.
-autoclass_content = 'both'
+
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

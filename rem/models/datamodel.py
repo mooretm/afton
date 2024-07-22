@@ -49,18 +49,17 @@ class DataModel:
     """ Organization, analysis, and plotting methods for analyzing 
     Validation Study REM data. 
 
-    :ivar vdf: REM data as output from the VerifitModel
+    :ivar vdf: Verifit DataFrame.
     :type vdf: pd.DataFrame
-
-    :ivar edf: e-STAT 2.0 target data as output from the EstatModel
+    :ivar edf: e-STAT 2.0 DataFrame.
     :type edf: pd.DataFrame
     """
 
     def __init__(self, verifit_data, estat_data):
         """ 
-        :param verifit_data: REM data as output from the VerifitModel
+        :param verifit_data: REM data as output from the VerifitModel.
         :type verifit_data: pd.DataFrame
-        :param estat_data: e-STAT 2.0 target data as output from the EstatModel
+        :param estat_data: e-STAT target data as output from the EstatModel.
         :type estat_data: pd.DataFrame
         """
         # Define variables
@@ -76,17 +75,37 @@ class DataModel:
     # Organize Data #
     #################
     def _organize_estat_data(self):
-        # Organize df
-        self.edf[['subject', 'junk']] = self.edf['filename'].str.split('_', expand=True)
+        """ Organize e-STAT 2.0 DataFrame for use with class methods. 
+        
+        :return: Updates self.edf instance variable.
+        :rtype: None
+        """
+        self.edf[['subject', 'junk']] = self.edf['filename'].str.split(
+            '_', expand=True
+        )
         self.edf.drop(['filename', 'junk', 'data'], axis=1, inplace=True)
         self.edf.set_index(['subject', 'form_factor'], inplace=True)
         self.edf.reset_index(inplace=True)
 
     def _organize_verifit_data(self):
-        # Organize df
-        self.vdf[['subject', 'condition']] = self.vdf['filename'].str.split("_", expand=True)
+        """ Organize Verifit data for use with class methods. 
+        
+        :return: Updates self.vdf instance variable.
+        :rtype: None
+        """
+        self.vdf[['subject', 'condition']] = self.vdf['filename'].str.split(
+            "_", expand=True
+        )
         self.vdf.loc[:, 'form_factor'] = ""
-        self.vdf = self.vdf[['subject', 'condition', 'form_factor', 'freq', 'left65', 'right65']]
+        self.vdf = self.vdf[
+            ['subject', 
+             'condition', 
+             'form_factor', 
+             'freq', 
+             'left65', 
+             'right65'
+            ]
+        ]
         self.vdf.reset_index(drop=True, inplace=True)
 
     def _assign_form_factors(self):
@@ -102,28 +121,57 @@ class DataModel:
         for ii in range(0, self.vdf.shape[0]):
             self.vdf.iloc[ii, 2] = temp[self.vdf.iloc[ii,0]]
 
-    def collapse_form_factors(self):
-        """ Collapse all RICs and all Wireless Customs (ITC and ITE). """
-        # Grab form factors to collapse 
-        estat_RICs = self.edf[self.edf["form_factor"].isin(["RIC_RT", "RIC312", "MRIC"])].copy()
-        verifit_RICs = self.vdf[self.vdf["form_factor"].isin(["RIC_RT", "RIC312", "MRIC"])].copy()
+    # def collapse_form_factors(self):
+    #     """ Collapse all RICs and all Wireless Customs (ITC and ITE). """
+    #     # Grab form factors to collapse 
+    #     estat_RICs = self.edf[self.edf["form_factor"].isin(
+    #         ["RIC_RT", "RIC312", "MRIC"])].copy()
+    #     verifit_RICs = self.vdf[self.vdf["form_factor"].isin(
+    #         ["RIC_RT", "RIC312", "MRIC"])].copy()
 
-        estat_wireless_customs = self.edf[self.edf["form_factor"].isin(["ITC", "ITE", "CIC"])].copy()
-        verifit_wireless_customs = self.vdf[self.vdf["form_factor"].isin(["ITC", "ITE", "CIC"])].copy()
+    #     estat_wireless_customs = self.edf[self.edf["form_factor"].isin(
+    #         ["ITC", "ITE", "CIC"])].copy()
+    #     verifit_wireless_customs = self.vdf[self.vdf["form_factor"].isin(
+    #         ["ITC", "ITE", "CIC"])].copy()
 
-        # Change form factor name
-        estat_RICs["form_factor"] = "allRIC"
-        verifit_RICs["form_factor"] = "allRIC"
-        estat_wireless_customs["form_factor"] = "WirelessCustoms"
-        verifit_wireless_customs["form_factor"] = "WirelessCustoms"
+    #     # Change form factor name
+    #     estat_RICs["form_factor"] = "allRIC"
+    #     verifit_RICs["form_factor"] = "allRIC"
+    #     estat_wireless_customs["form_factor"] = "WirelessCustoms"
+    #     verifit_wireless_customs["form_factor"] = "WirelessCustoms"
 
-        self.estat_collapsed = pd.concat([estat_RICs, estat_wireless_customs])
-        self.verifit_collapsed = pd.concat([verifit_RICs, verifit_wireless_customs])
+    #     self.estat_collapsed = pd.concat([estat_RICs, estat_wireless_customs])
+    #     self.verifit_collapsed = pd.concat(
+    #         [verifit_RICs, 
+    #          verifit_wireless_customs
+    #         ]
+    #     )
 
     ################
     # Analyze Data #
     ################
     def analyze(self, verifit_data, estat_data, **kwargs):
+        """ Calculate the number of ears meeting REM criteria.
+
+        Prints the percent of ears for each frequency, as well as
+        the results of a 1-way U test.
+
+        :param verifit_data: The instance variable self.vdf from 
+            creating DataModel.
+        :type verifit_data: pd.DataFrame
+        :param estat_data: The instance variable self.edf from 
+            creating DataModel.
+        :type estat_data: pd.DataFrame
+        :param low_freqs: Passed as kwarg; a list of low frequencies.
+        :type low_freqs: list
+        :param low_ceiling: Passed as kwarg; the upper deviation limit
+            for low frequencies.
+        :type low_ceiling: int
+        :param high_freqs: Passed as kwarg; a list of high frequencies.
+        :type high_freqs: list
+        :param high_ceiling: Passed as kwarg; the upper deviation limit 
+            for high frequencies.
+        """
         # Calculate difference scores
         self._diff_from_estat(verifit_data, estat_data)
 
@@ -147,7 +195,6 @@ class DataModel:
                 for cps in kwargs['low_freqs']:
                     temp = self.estat_diffs[cond + '_' + form]
                     temp = temp[temp['freq']==cps]
-                    #print(temp)
                     bools = np.abs(temp[['left_diff', 'right_diff']]) <= kwargs['low_ceiling']
                     t = bools.values.sum()
                     f = (~bools).values.sum()
@@ -191,8 +238,19 @@ class DataModel:
                     print(f"datamodel: {cond} {form} {cps} one-way t test CI: {np.round(result.confidence_interval(confidence_level=0.95),2)}\n")
 
     def _diff_from_estat(self, verifit_data, estat_data):
-        # Dictionary to hold dfs with difference scores by 
-        # condition and form factor
+        """ Calculate the signed differences between the Verifit data 
+        conditions (BestFit, TargetMatch, EndStudy) and e-STAT 2.0
+        targets.
+
+        :param verifit_data: Organized Verifit data (self.vdf) from creating datamodel.
+        :type verifit_data: pd.DataFrame
+        :param estat_data: Organized e-STAT data (self.edf) from creating datamodel.
+        :type estat_data: pd.DataFrame
+        :return: Updates self.estat_diffs
+        :rtype: None
+        """
+        # Dictionary to hold DataFrames with difference scores 
+        #     by condition and form factor.
         self.estat_diffs = {}
 
         for cond in verifit_data['condition'].unique():
@@ -208,8 +266,15 @@ class DataModel:
                 self.estat_diffs[cond + '_' + form] = v
 
     def _diff_from_endstudy(self, verifit_data):
-        # Dictionary to hold difference scores by condition and form factor
-        # Dictionary to hold dataframes with difference scores
+        """ Calculate the signed differences between the EndStudy and 
+        TargetMatch REM data.
+
+        :param verifit_data: Organized Verifit data (datamodel.vdf) from creating datamodel.
+        :type verifit_data: pd.DataFrame
+        :return: Updates self.endstudy_diffs
+        :rtype: None
+        """
+        # Dictionary to hold DataFrames with difference scores
         self.endstudy_diffs = {}
         """This block of code gets all conditions from the verifit_data df, 
         but only grabs subjects that have EndStudy data. (Will also grab
@@ -250,7 +315,7 @@ class DataModel:
         TargetMatch REM data.
 
         :param verifit_data: Organized Verifit data (datamodel.vdf) from creating datamodel.
-        :type verifit_data: DataFrame
+        :type verifit_data: pd.DataFrame
         :return: Updates self.best_target_diffs
         :rtype: None
         """
@@ -286,7 +351,7 @@ class DataModel:
         :param data: REM data organized by datamodel on init.
         :type data: pd.DataFrame
         :return: Transformed REM data for plotting. 
-        :rtype: DataFrame
+        :rtype: pd.DataFrame
         """
         # Left/right diff columns to long format
         data = pd.melt(data, id_vars=['subject', 'freq'], 
@@ -296,11 +361,11 @@ class DataModel:
         data = pd.pivot(data, index=['subject', 'side'], columns='freq', values='diff') 
         return data
 
-    def _ylim_max(self, base=5):
-        dfx = pd.concat([df for df in self.estat_diffs.values()], ignore_index=True)
-        upper = np.max(np.abs(dfx.iloc[:,6:]))
-        upper += 5 # Add 5 in case value was rounded down
-        return base * round(upper/base)
+    # def _ylim_max(self, base=5):
+    #     dfx = pd.concat([df for df in self.estat_diffs.values()], ignore_index=True)
+    #     upper = np.max(np.abs(dfx.iloc[:,6:]))
+    #     upper += 5 # Add 5 in case value was rounded down
+    #     return base * round(upper/base)
 
     ########################################
     # Absolute Difference From eSTAT Plots #
@@ -505,21 +570,39 @@ class DataModel:
     #################
     # Write to .csv #
     #################
-    def write_estat_diffs(self, estat_diffs, title=None):
-        # Check for custom title argument
-        if not title:
-            title = 'estat_diffs'
+    def write_estat_diffs(self, estat_diffs, filename=None):
+        """ Save provided DataFrame as CSV with specified file name.
+        
+        :param estat_diffs: A DataFrame of deviations from e-STAT 2.0. 
+        :type estat_diffs: pd.DataFrame
+        :param filename: The desired filename for the CSV file. 
+        :type filename: str
+        :return: CSV file
+        :rtype: CSV
+        """
+        # Check for custom filename argument
+        if not filename:
+            filename = 'estat_diffs'
         # Concatenate dict into single df and write to .csv
         estat = pd.concat(estat_diffs.values(), ignore_index=True)
-        estat.to_csv(title+'.csv', index=False)
+        estat.to_csv(filename+'.csv', index=False)
 
-    def write_endstudy_diffs(self, endstudy_diffs, title=None):
-        # Check for custom title argument
-        if not title:
-            title = 'endstudy_diffs'
+    def write_endstudy_diffs(self, endstudy_diffs, filename=None):
+        """ Save provided DataFrame as CSV with specified file name.
+        
+        :param endstudy_diffs: A DataFrame of deviations from endstudy condition. 
+        :type endstudy_diffs: pd.DataFrame
+        :param filename: The desired filename for the CSV file. 
+        :type filename: str
+        :return: CSV file
+        :rtype: CSV
+        """
+        # Check for custom filename argument
+        if not filename:
+            filename = 'endstudy_diffs'
         # Concatenate dict into single df and write to .csv
         estat = pd.concat(endstudy_diffs.values(), ignore_index=True)
-        estat.to_csv(title+'.csv', index=False)
+        estat.to_csv(filename+'.csv', index=False)
 
 ################
 # Module Guard #

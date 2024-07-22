@@ -149,7 +149,8 @@ def wilcoxon_test(data, condition):
 def make_plots(data, title=None, save_name=None, show=True, save=False):
 	""" Create box plots for SIN data. 
 	
-	Accepts custom plot title and saved PNG name. The 'save_name' 
+	Accepts custom plot title and saved PNG name. Optionally 
+	displays and/or saves plots. 
 	
 	:param data: A DataFrame of fully organized word or sentence data.
 	:type data: pd.DataFrame
