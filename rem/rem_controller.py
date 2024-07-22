@@ -2,23 +2,46 @@
 deviation from e-STAT 2.0 targets.
 
 Written by: Travis M. Moore
+
 Created: July 28, 2023
+
 Last edited: July 10, 2024
 """
-
-###########
-# Imports #
-###########
-# Import custom modules
-from models import verifitmodel
-from models import estatmodel
-from models import datamodel
 
 """
 NOTE: To write print statements to file rather than console,
 run using: 'python rem.py > output.txt'. This will
 provide a .txt file with the results of the analyses.
 """
+
+###########
+# Imports #
+###########
+# Standard library
+import logging
+
+# Custom modules
+from models import verifitmodel
+from models import estatmodel
+from models import datamodel
+
+##########
+# Logger #
+##########
+# Create a custom formatter
+formatter = logging.Formatter(
+    '[%(levelname)s|%(module)s|L%(lineno)d] %(message)s'
+)
+# Create new logger with module name
+logger = logging.getLogger(__name__)
+# Set new logger level
+logger.setLevel(logging.DEBUG)
+# Create a handler
+handler = logging.StreamHandler()
+# Add formatter to handler
+handler.setFormatter(formatter)
+# Add handler to logger
+logger.addHandler(handler)
 
 #############
 # Constants #
@@ -41,10 +64,12 @@ PARS = {
 # Import VERIFIT and ESTAT Data #
 #################################
 # VERIFIT
+logger.info("Grabbing Verifit data")
 v = verifitmodel.VerifitModel(_PATH, freqs=FREQS)
 v.get_data()
 
 # eSTAT
+logger.info("Grabbing e-STAT 2.0 data")
 e = estatmodel.EstatModel(_PATH, freqs=FREQS)
 e.get_targets()
 

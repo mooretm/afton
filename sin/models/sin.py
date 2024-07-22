@@ -1,6 +1,6 @@
-""" Script to organize and analyze speech in noise data.
+""" Functions to organize and analyze speech in noise data.
 
-This script relies on a single CSV file containing only 
+These functions rely on a single CSV file containing only 
 word and sentence score data for a given group (e.g., RIC, CIC). 
 
 Written by: Travis M. Moore and Sarah Iverson
@@ -37,7 +37,7 @@ formatter = logging.Formatter(
 # Create new logger with module name
 logger = logging.getLogger(__name__)
 # Set new logger level
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.INFO) # DEBUG
 # Create a handler
 handler = logging.StreamHandler()
 # Add formatter to handler
@@ -200,38 +200,4 @@ def make_plots(data, title=None, save_name=None, show=True, save=False):
 # Module Guard #
 ################
 if __name__ == '__main__':
-
-	# Get data from file browser
-	#data = browse_for_data()
-
-	# Get data from file path ('./' refers to the root folder)
-	data = pd.read_csv('./afton_sin_test_data.csv')
-
-	# Prepare word and sentence data
-	word_data, sentence_data = organize_data(data)
-
-	# Friedman test
-	friedman_test(word_data, "words")
-	friedman_test(sentence_data, "sentences")
-
-	# Wilcoxon Test
-	wilcoxon_test(word_data, "words")
-	wilcoxon_test(sentence_data, "sentences")
-
-	# Make plots
-	# Words
-	make_plots(
-		data=word_data,
-		title="Word-Level PC at Fixed Level",
-		save_name="word_data",
-		show=True,
-		save=False
-	)
-	# Sentences
-	make_plots(
-		data=sentence_data,
-		title="Sentence-Level PC at Fixed Level",
-		save_name="sentence_data",
-		show=True,
-		save=False
-	)
+	pass

@@ -1,8 +1,12 @@
-""" Code to import and organize DAM results from Afton Validation. 
-Returns two CSV files: raw df and df with complete datasets. 
+""" Functions to import and organize DAM results from Afton Validation. 
 
-Written by: Sarah Iverson and Travis M. Moore
-Last Edited: July 2, 2024
+This module concatenates DAM raw CSV files, and returns a single 
+DataFrame containing only complete datasets. This script does 
+not perform any statistical analyses.
+
+Written by: Travis M. Moore and Sarah Iverson
+
+Last Edited: July 18, 2024
 """
 
 ###########
@@ -54,31 +58,34 @@ COMPARISONS = {
 # Functions #
 #############
 def _validate_file_name(file_name):
-    """ Make sure each data file has a valid name.
+    """ Check that file name is valid.
 
-    :param filename: A CSV file name from Vesta for DAM
+    :param filename: A CSV file name from Vesta for DAM.
     :type filename: Path
-    :return: True or False based on whether or not the filename matches the pattern
+    :return: True or False based on whether or not the filename 
+        matches the pattern.
     :rtype: bool
     """
     # Get just the file name (minus path)
     file_name = os.path.basename(file_name)
     logger.info("Importing: %s", file_name)
-
     # File name pattern
     pattern = r"^\d{4}_\w+_\d{4}_(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)_\d{2}_\d{2}\d{2}\.csv$"
-    
     # Check file_name against pattern
     if not re.match(pattern, file_name):
         return False
     return True
 
 def import_data(path):
-    """ Import DAM data and create a single DataFrame.
+    """ Import and concatenate raw DAM CSV data.
 
-    :param path: Path to data folder 
+    This function also verifies that the file names are valid, and
+    will stop the script if an invalid name was found. Invalid 
+    file names will be printed to the console for inspection. 
+
+    :param path: Path to data folder.
     :type path: str
-    :return: Organized DAM data
+    :return: Concatenated DAM CSV data in a single DataFrame.
     :rtype: pd.DataFrame
     """
     logger.info("Attempting to create concatenated data set")
@@ -86,7 +93,6 @@ def import_data(path):
     logger.info("Getting list of file paths")
     files = Path(path).glob('*.csv')
     files=list(files)
-
     # Import data
     logger.info("Attempting to read files")
     df_list = []
@@ -99,7 +105,6 @@ def import_data(path):
         temp = pd.read_csv(file)
         # Append to list
         df_list.append(temp)
-
     # Concatenate list of dfs into single df
     data = pd.concat(df_list)
     # Display and invalid file names found during import
@@ -115,13 +120,18 @@ def import_data(path):
         return data
 
 def organize_data(data):
-    """ Combine button_A and button_B columns into a single column.
-    Make one column for SNR from audio file name.
+    """ Organize data DataFrame for further processing. 
+    
+    1. Add new column for comparisons (combine button_A and button_B columns).
+    2. Add new column for SNR (based on audio file name).
+    3. Add new column for audio track number (based on audio file name).
+    4. Add new column for trial type (pref or noise).
+    5. Flip mirrored conditions (e.g., DAM3_MNR3 -> MNR3_DAM3)
 
-    :param data: Imported Vesta for DAM data
+    :param data: Imported Vesta for DAM CSV data.
     :type data: DataFrame
-    :return: 
-    :rtype: DataFrame
+    :return: A DataFrame organized for further analysis.
+    :rtype: pd.DataFrame
     """
     logger.info("Creating additional columns")
     # Insert comparison column 
@@ -132,7 +142,6 @@ def organize_data(data):
         column='comparison', 
         value=data["button_A"]+"-"+data["button_B"]
     )
-
     # Insert snr and track columns 
     # Populate it with the fifth value from audio_file
     audio_files = data["audio_file"]
@@ -147,8 +156,8 @@ def organize_data(data):
     data['tracks'] = tracks
     # Convert tracks to labels
     logger.info("Converting track numbers to condition labels")
+    # Type column
     data['type'] = data['tracks'].apply(lambda value: 'noise' if value in NOISE_TRACKS else 'pref')
-
     # Flip mirrored conditions to the same direction
     logger.info("Adjusting mirrored conditions")
     data['comparison'] = data['comparison'].apply(lambda x: COMPARISONS[x])
@@ -156,22 +165,38 @@ def organize_data(data):
     return data
 
 def remove_incomplete_datasets(data):
-    """ Write something here. """
-    # Make data frames
+    """ Remove all incomplete datasets from the DataFrame.
+
+    :param data: An organized DataFrame of concatenated DAM data. 
+    :type data: pd.DataFrame
+    :return: DataFrame with incomplete datasets removed.
+    :rtype: pd.DataFrame
+    """
+    # Make separate preferences and noise data frames
+    # Copy data so we don't modify the original DataFrame
     mli = data.copy()
     mask = mli['type'] == 'pref'
     prefs = mli[mask].copy()
     noise = mli[-mask].copy()
     df_list = [prefs, noise]
-
+    # Check each unique condition for incomplete data.
+    # Use a 'for loop' to cycle through conditions and 
+    #   a DataFrame with a multilevel index for sorting.
     for df in df_list:
+        # Get values from the current DataFrame
         subject_ids = df["subject"].unique()
         conditions = df["condition"].unique()
         snrs = df["snr"].unique()
         comparisons = df["comparison"].unique()
-        indices_to_remove = []
-        df.set_index(['subject', 'comparison', 'snr', 'condition'], inplace=True)
-        df.sort_index(level=['subject', 'comparison', 'snr', 'condition'], inplace=True)
+        #indices_to_remove = []
+        df.set_index(
+            ['subject', 'comparison', 'snr', 'condition'], 
+            inplace=True
+        )
+        df.sort_index(
+            level=['subject', 'comparison', 'snr', 'condition'], 
+            inplace=True
+        )
         for subject in subject_ids:
             for comparison in comparisons:
                 for snr in snrs:
@@ -183,8 +208,14 @@ def remove_incomplete_datasets(data):
                                 print(temp.shape)
                                 print(temp)
                                 #indices_to_remove.append((subject, comparison, snr, condition))
-                                df.drop((subject, comparison, snr, condition), axis=0, inplace=True)
+                                df.drop(
+                                    (subject, comparison, snr, condition), 
+                                    axis=0, 
+                                    inplace=True
+                                )
                         except KeyError:
+                            # This exception is necessary to
+                            #   ignore non-existent combinations.
                             continue
     return pd.concat(df_list)
 
@@ -192,17 +223,4 @@ def remove_incomplete_datasets(data):
 # Module Guard #
 ################
 if __name__ == '__main__':
-
-    # The code below runs when dam.py is called as a module
-    path=r'\\starfile\Public\Temp\CAR Group\Afton Validation\DAM\results'
-
-    # Import data
-    raw_data = import_data(path)
-
-    if isinstance(raw_data, pd.DataFrame):
-        # Organize data 
-        prepped_data = organize_data(raw_data)
-
-        # Remove incomplete datasets
-        clean_data = remove_incomplete_datasets(prepped_data)
-        clean_data.to_csv('dam_clean.csv')
+    pass
