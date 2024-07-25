@@ -6,7 +6,7 @@ Written by: Travis M. Moore
 
 Created: August 03, 2023
 
-Last edited: July 12, 2024
+Last edited: July 24, 2024
 """
 
 ###########
@@ -120,6 +120,20 @@ class DataModel:
         # Update empty form_factor column in Verifit df using dict
         for ii in range(0, self.vdf.shape[0]):
             self.vdf.iloc[ii, 2] = temp[self.vdf.iloc[ii,0]]
+
+    def collapse_form_factors(self, verifit_data, estat_data, collapse_dict):
+        """ Collapse across specified form factors.
+        
+        :param data: A DataFrame as organized by the DataModel (e.g., self.vdf)
+        :type data: pd.DataFrame
+        :param collapse_dict: A dictionary of which form factors to collapse.
+        :type collapse_dict: dict
+        :return: A DataFrame with collapsed form factors.
+        :rtype: pd.DataFrame
+        """
+        verifit_data['form_factor'] = verifit_data['form_factor'].apply(lambda row: collapse_dict[row])
+        estat_data['form_factor'] = estat_data['form_factor'].apply(lambda row: collapse_dict[row])
+        return verifit_data, estat_data
 
     # def collapse_form_factors(self):
     #     """ Collapse all RICs and all Wireless Customs (ITC and ITE). """

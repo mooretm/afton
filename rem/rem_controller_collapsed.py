@@ -5,7 +5,7 @@ Written by: Travis M. Moore
 
 Created: July 28, 2023
 
-Last edited: July 23, 2024
+Last edited: July 24, 2024
 """
 
 """
@@ -19,6 +19,7 @@ provide a .txt file with the results of the analyses.
 ###########
 # Standard library
 import logging
+from logging.handlers import RotatingFileHandler
 
 # Custom modules
 from models import verifitmodel
@@ -28,28 +29,41 @@ from models import datamodel
 ##########
 # Logger #
 ##########
+def mb_to_bytes(mb):
+    """ Convert megabytes to bytes. """
+    return mb * 1024 * 1024
+
 # Create a custom formatter
 formatter = logging.Formatter(
     '[%(levelname)s|%(module)s|L%(lineno)d] %(message)s'
 )
+
 # Create new logger with module name
 logger = logging.getLogger(__name__)
 # Set new logger level
 logger.setLevel(logging.DEBUG)
-# Create a handler
-handler = logging.StreamHandler()
-# Add formatter to handler
-handler.setFormatter(formatter)
-# Add handler to logger
-logger.addHandler(handler)
+
+# Create stream handler for console output
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
+# Create rotating file handler to write logs to file
+file_handler = RotatingFileHandler(
+    'rem_collapsed.log', 
+    maxBytes=mb_to_bytes(2), 
+    backupCount=2
+)
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 #############
 # Constants #
 #############
 _PATH = r'\\starfile\Public\Temp\CAR Group\Afton Validation\REM and Targets'
 FREQS = [250, 500, 1000, 1500, 2000, 3000, 4000, 6000, 8000]
-LOW = [250, 500, 1000, 2000]
-HIGH = [3000, 4000, 6000]
+LOW = [500, 1000, 2000]
+HIGH = [3000, 4000]
 
 # Create dictionary of arguments 
 PARS = {
@@ -57,6 +71,15 @@ PARS = {
     'low_ceiling': 5,
     'high_freqs': HIGH,
     'high_ceiling': 8
+}
+
+COLLAPSE = {
+    'MRIC': 'RIC',
+    'RIC_RT': 'RIC',
+    'RIC312': 'RIC',
+    'ITE': 'ReCustom',
+    'ITC': 'ReCustom',
+    'CIC': 'CIC'
 }
 
 #################################
@@ -81,8 +104,11 @@ d = datamodel.DataModel(
         estat_data=e.estat_targets.copy()
 )
 
+# Collapse form factors
+vdf, edf = d.collapse_form_factors(d.vdf, d.edf, COLLAPSE)
+
 # Analyze data (number of ears meeting criteria)
-d.analyze(d.vdf, d.edf, **PARS)
+d.analyze(vdf, edf, **PARS)
 
 #############
 # Plot Data #
@@ -105,14 +131,14 @@ d.abs_diff_plots(
 
 # Make fine tuning plots (TargetMatch - EndStudy)
 d.endstudy_targetmatch_fine_tuning_plots(
-    endstudy_data=d.vdf,
+    endstudy_data=vdf,
     show='n', 
     save='y'
 )
 
 # Make fine tuning plots (BestFit - TargetMatch)
 d.bestfit_targetmatch_fine_tuning_plots(
-    verifit_data=d.vdf,
+    verifit_data=vdf,
     show='n',
     save='y'
 )
@@ -121,5 +147,5 @@ d.bestfit_targetmatch_fine_tuning_plots(
 # Write Data to File #
 ######################
 # Write data to .csv
-d.write_estat_diffs(d.estat_diffs, 'estat_diffs')
-d.write_endstudy_diffs(d.endstudy_diffs, 'endstudy_diffs') 
+d.write_estat_diffs(d.estat_diffs, 'estat_diffs_collapsed')
+d.write_endstudy_diffs(d.endstudy_diffs, 'endstudy_diffs_collapsed') 

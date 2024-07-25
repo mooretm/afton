@@ -12,4 +12,6 @@ dist/
 *.png
 *.jpg
 *.jpeg
+*.log
 *.wav
+*.zip
